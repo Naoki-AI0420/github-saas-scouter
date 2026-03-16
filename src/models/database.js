@@ -64,6 +64,13 @@ function initTables(db) {
     CREATE INDEX IF NOT EXISTS idx_repos_status ON repositories(status);
     CREATE INDEX IF NOT EXISTS idx_repos_first_seen ON repositories(first_seen);
   `);
+
+  // マイグレーション: japanese_summary カラム追加
+  try {
+    db.exec(`ALTER TABLE repositories ADD COLUMN japanese_summary TEXT`);
+  } catch (e) {
+    // カラムが既に存在する場合は無視
+  }
 }
 
 function closeDb() {

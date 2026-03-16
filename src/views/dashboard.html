@@ -86,10 +86,11 @@
     <table>
       <thead>
         <tr>
-          <th onclick="sortBy('score_total')">Score</th>
+          <th onclick="sortBy('score_total')">スコア</th>
           <th>リポジトリ</th>
+          <th>解説</th>
           <th>カテゴリ</th>
-          <th onclick="sortBy('stars')">Stars</th>
+          <th onclick="sortBy('stars')">Star数</th>
           <th>言語</th>
           <th>ライセンス</th>
           <th>スコア内訳</th>
@@ -218,6 +219,7 @@
             <a href="/repo/${r.id}"><strong>${r.name}</strong></a><br>
             <small style="color:#8b949e">${(r.description || '').substring(0, 80)}</small>
           </td>
+          <td><small style="color:#e3b341;line-height:1.4">${(r.japanese_summary || '').substring(0, 100)}</small></td>
           <td>${r.category}</td>
           <td>⭐ ${r.stars.toLocaleString()}</td>
           <td>${r.language}</td>
@@ -226,7 +228,7 @@
             <div class="score-bar">
               <div class="sb-biz" style="width:${r.score_business / 30 * 100}%"></div>
               <div class="sb-pkg" style="width:${r.score_packaging / 25 * 100}%"></div>
-              <div class="sb-jp" style="width:${r.score_japan_gap / 25 * 100}%"></div>
+              <div class="sb-jp" style="width:${r.score_japan_gap / 40 * 100}%"></div>
               <div class="sb-mnt" style="width:${r.score_maintenance / 20 * 100}%"></div>
             </div>
             <small style="color:#8b949e">B:${r.score_business} P:${r.score_packaging} J:${r.score_japan_gap} M:${r.score_maintenance}</small>

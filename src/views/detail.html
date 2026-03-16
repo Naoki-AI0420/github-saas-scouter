@@ -21,12 +21,12 @@
     .meta { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
     .meta span { background: #21262d; padding: 4px 12px; border-radius: 16px; font-size: 13px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
     .card h3 { color: #8b949e; font-size: 14px; margin-bottom: 12px; text-transform: uppercase; }
     .score-detail { margin: 8px 0; }
     .score-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
     .score-track { height: 8px; background: #21262d; border-radius: 4px; overflow: hidden; }
-    .score-fill { height: 100%; border-radius: 4px; }
+    .score-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
     .readme-box { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-top: 12px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
     .strategy-box { background: #1f6feb11; border: 1px solid #1f6feb44; border-radius: 8px; padding: 16px; margin-top: 12px; }
     .strategy-box h4 { color: #58a6ff; margin-bottom: 8px; }
@@ -37,11 +37,18 @@
     .actions .primary { background: #238636; border-color: #238636; color: white; display: inline-block; padding: 10px 20px; }
     .topics { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     .topic { background: #1f6feb33; color: #58a6ff; padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+    .jp-summary { background: #e3b34122; border: 1px solid #e3b34166; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .jp-summary h3 { color: #e3b341; margin-bottom: 8px; font-size: 16px; }
+    .jp-summary p { font-size: 15px; line-height: 1.7; }
+    .pkg-table { width: 100%; margin-top: 12px; }
+    .pkg-table td { padding: 8px 12px; border-bottom: 1px solid #21262d; font-size: 14px; }
+    .pkg-table td:first-child { color: #8b949e; width: 140px; font-weight: 500; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <a href="/" class="back">← ダッシュボードに戻る</a>
+    <a href="/" class="back">&larr; ダッシュボードに戻る</a>
     <div id="content">読み込み中...</div>
   </div>
   <script>
@@ -54,13 +61,39 @@
       if (!repo.has_ui) strategies.push('UIダッシュボードを追加してSaaS化');
       if (!repo.has_docker) strategies.push('Docker化してデプロイを容易にする');
       strategies.push('日本語ローカライズ（UI、ドキュメント）');
-      if (repo.category === '予約システム' || repo.category === 'POS') strategies.push('日本の決済サービス連携（Stripe JP、PAY.JP）');
-      if (repo.category === '請求書' || repo.category === '会計') strategies.push('インボイス制度対応、e-Tax連携');
-      if (repo.category === 'HR/勤怠') strategies.push('日本の労働基準法準拠の勤怠管理機能');
+      if (['予約システム', 'POS', 'カレンダー/予約'].includes(repo.category)) strategies.push('日本の決済サービス連携（Stripe JP、PAY.JP）');
+      if (['請求書', '会計'].includes(repo.category)) strategies.push('インボイス制度対応、e-Tax連携');
+      if (repo.category === 'HR/勤怠' || repo.category === '採用管理') strategies.push('日本の労働基準法準拠の勤怠管理機能');
       strategies.push('マルチテナント対応（SaaS基盤）');
       strategies.push('Stripe課金統合（月額サブスクリプション）');
       strategies.push('カスタマーサポート / オンボーディングフロー');
       return strategies;
+    }
+
+    function getPackagingPlan(repo) {
+      const targetMap = {
+        'CRM': { target: '中小企業の営業部門', price: '月額 9,800〜29,800円', work: 'UI日本語化、日本の商習慣対応（名刺管理等）' },
+        'メルマガ': { target: '中小EC・マーケター', price: '月額 4,980〜19,800円', work: 'テンプレート日本語化、特定電子メール法対応' },
+        'SEO': { target: 'Web制作会社・マーケター', price: '月額 9,800〜49,800円', work: '日本語キーワード分析対応、レポート日本語化' },
+        'POS': { target: '小売店・飲食店', price: '月額 4,980〜14,800円', work: '軽減税率対応、レシート印刷、決済端末連携' },
+        '在庫管理': { target: '小売・卸売業', price: '月額 9,800〜29,800円', work: 'バーコード/JANコード対応、発注書テンプレート' },
+        'フォームビルダー': { target: '企業のマーケ・総務部門', price: '月額 2,980〜9,800円', work: '日本語フォームテンプレート、kintone連携' },
+        '予約システム': { target: 'サロン・クリニック・教室', price: '月額 4,980〜19,800円', work: 'LINE連携、日本の祝日対応、SMS通知' },
+        'チャットボット': { target: 'EC・カスタマーサポート部門', price: '月額 9,800〜29,800円', work: '日本語NLP対応、LINE/Slack連携' },
+        '請求書': { target: 'フリーランス・中小企業', price: '月額 2,980〜9,800円', work: 'インボイス制度対応、freee/MF連携' },
+        'プロジェクト管理': { target: 'IT企業・スタートアップ', price: '月額 980〜2,980円/ユーザー', work: 'UI日本語化、Slack/Teams連携' },
+        'アンケート': { target: '企業の企画・マーケ部門', price: '月額 4,980〜14,800円', work: '日本語テンプレート、Excel出力' },
+        'HR/勤怠': { target: '中小企業の人事部門', price: '月額 300〜500円/ユーザー', work: '36協定対応、有給管理、年末調整連携' },
+        '会計': { target: '中小企業・税理士事務所', price: '月額 9,800〜29,800円', work: '日本の勘定科目、消費税計算、e-Tax連携' },
+        'LMS': { target: '企業研修・教育機関', price: '月額 29,800〜98,000円', work: 'SCORM対応、日本語UI、修了証発行' },
+      };
+      const cat = repo.category || '';
+      if (targetMap[cat]) return targetMap[cat];
+      // CN/RUカテゴリはベースにフォールバック
+      for (const [key, val] of Object.entries(targetMap)) {
+        if (cat.includes(key)) return val;
+      }
+      return { target: '中小企業・スタートアップ', price: '月額 4,980〜19,800円', work: 'UI日本語化、日本市場向けカスタマイズ' };
     }
 
     async function load() {
@@ -69,29 +102,37 @@
       const r = await res.json();
       const topics = JSON.parse(r.topics || '[]');
       const strategies = getStrategy(r);
+      const pkg = getPackagingPlan(r);
 
       document.title = `${r.full_name} - GitHub SaaS候補スカウター`;
       document.getElementById('content').innerHTML = `
         <div class="header">
           <div>
-            <h1>${r.full_name}</h1>
-            <p style="color:#8b949e;margin-top:4px">${r.description || ''}</p>
+            <h1>${escapeHtml(r.full_name)}</h1>
+            <p style="color:#8b949e;margin-top:4px">${escapeHtml(r.description || '')}</p>
             <div class="meta">
-              <span>⭐ ${r.stars.toLocaleString()}</span>
-              <span>🍴 ${r.forks.toLocaleString()}</span>
-              <span>📝 ${r.license}</span>
-              <span>💻 ${r.language}</span>
-              <span>📁 ${r.category}</span>
-              <span>${r.has_docker ? '🐳 Docker' : '❌ No Docker'}</span>
-              <span>${r.has_ui ? '🖥 UI有' : '❌ UI無'}</span>
+              <span>Star ${r.stars.toLocaleString()}</span>
+              <span>Fork ${r.forks.toLocaleString()}</span>
+              <span>ライセンス: ${escapeHtml(r.license)}</span>
+              <span>言語: ${escapeHtml(r.language)}</span>
+              <span>カテゴリ: ${escapeHtml(r.category)}</span>
+              <span>${r.has_docker ? 'Docker対応' : 'Docker未対応'}</span>
+              <span>${r.has_ui ? 'UI有' : 'UI無'}</span>
             </div>
-            <div class="topics">${topics.map(t => `<span class="topic">${t}</span>`).join('')}</div>
+            <div class="topics">${topics.map(t => `<span class="topic">${escapeHtml(t)}</span>`).join('')}</div>
           </div>
           <div style="text-align:center">
             <div class="score-big ${scoreClass(r.score_total)}">${r.score_total}</div>
             <div style="color:#8b949e;font-size:12px">/100点</div>
           </div>
         </div>
+
+        ${r.japanese_summary ? `
+        <div class="jp-summary">
+          <h3>日本語解説</h3>
+          <p>${escapeHtml(r.japanese_summary)}</p>
+        </div>
+        ` : ''}
 
         <div class="grid">
           <div class="card">
@@ -106,8 +147,8 @@
               <div class="score-track"><div class="score-fill" style="width:${r.score_packaging/25*100}%;background:#3fb950"></div></div>
             </div>
             <div class="score-detail">
-              <div class="score-label"><span>日本市場ギャップ</span><span>${r.score_japan_gap}/25</span></div>
-              <div class="score-track"><div class="score-fill" style="width:${r.score_japan_gap/25*100}%;background:#d29922"></div></div>
+              <div class="score-label"><span>日本市場ギャップ</span><span>${r.score_japan_gap}/40</span></div>
+              <div class="score-track"><div class="score-fill" style="width:${r.score_japan_gap/40*100}%;background:#d29922"></div></div>
             </div>
             <div class="score-detail">
               <div class="score-label"><span>メンテナンス状態</span><span>${r.score_maintenance}/20</span></div>
@@ -116,7 +157,12 @@
           </div>
 
           <div class="card">
-            <h3>推奨パッケージング戦略</h3>
+            <h3>パッケージング戦略</h3>
+            <table class="pkg-table">
+              <tr><td>想定ターゲット</td><td>${escapeHtml(pkg.target)}</td></tr>
+              <tr><td>想定月額</td><td>${escapeHtml(pkg.price)}</td></tr>
+              <tr><td>必要な作業</td><td>${escapeHtml(pkg.work)}</td></tr>
+            </table>
             <div class="strategy-box">
               <h4>SaaS化ステップ</h4>
               <ul>${strategies.map(s => `<li>${s}</li>`).join('')}</ul>
@@ -124,8 +170,8 @@
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:24px">
-          <h3>README（冒頭）</h3>
+        <div class="card">
+          <h3>README（冒頭抜粋）</h3>
           <div class="readme-box">${escapeHtml(r.readme_excerpt || 'README情報なし')}</div>
         </div>
 
@@ -137,7 +183,7 @@
             <option value="done" ${r.status==='done'?'selected':''}>完了</option>
             <option value="selling" ${r.status==='selling'?'selected':''}>販売中</option>
           </select>
-          <a href="https://github.com/${r.full_name}" target="_blank" class="primary">GitHubで開く</a>
+          <a href="https://github.com/${encodeURI(r.full_name)}" target="_blank" class="primary">GitHubで開く</a>
         </div>
       `;
 
@@ -146,7 +192,7 @@
         data: {
           labels: ['ビジネス価値', 'パッケージング', '日本市場ギャップ', 'メンテナンス'],
           datasets: [{
-            data: [r.score_business/30*100, r.score_packaging/25*100, r.score_japan_gap/25*100, r.score_maintenance/20*100],
+            data: [r.score_business/30*100, r.score_packaging/25*100, r.score_japan_gap/40*100, r.score_maintenance/20*100],
             backgroundColor: '#58a6ff22',
             borderColor: '#58a6ff',
             pointBackgroundColor: '#58a6ff',

@@ -38,6 +38,7 @@ describe('Repository Model & API', () => {
     closed_issues: 100,
     category: 'CRM',
     readme_lang: 'English',
+    japanese_summary: '顧客管理システム【売れる理由】一定の利用実績あり、UI付きですぐSaaS化可能',
     score_business: 25,
     score_packaging: 20,
     score_japan_gap: 22,

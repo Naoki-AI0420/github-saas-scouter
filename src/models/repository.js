@@ -8,13 +8,13 @@ const Repository = {
         github_id, full_name, name, description, stars, forks,
         license, language, last_updated, topics, readme_excerpt,
         has_docker, has_ui, has_docs, open_issues, closed_issues,
-        category, readme_lang, score_business, score_packaging, score_japan_gap,
+        category, readme_lang, japanese_summary, score_business, score_packaging, score_japan_gap,
         score_maintenance, score_total, last_crawled
       ) VALUES (
         @github_id, @full_name, @name, @description, @stars, @forks,
         @license, @language, @last_updated, @topics, @readme_excerpt,
         @has_docker, @has_ui, @has_docs, @open_issues, @closed_issues,
-        @category, @readme_lang, @score_business, @score_packaging, @score_japan_gap,
+        @category, @readme_lang, @japanese_summary, @score_business, @score_packaging, @score_japan_gap,
         @score_maintenance, @score_total, datetime('now')
       )
       ON CONFLICT(github_id) DO UPDATE SET
@@ -33,6 +33,7 @@ const Repository = {
         closed_issues = excluded.closed_issues,
         category = excluded.category,
         readme_lang = excluded.readme_lang,
+        japanese_summary = excluded.japanese_summary,
         score_business = excluded.score_business,
         score_packaging = excluded.score_packaging,
         score_japan_gap = excluded.score_japan_gap,
