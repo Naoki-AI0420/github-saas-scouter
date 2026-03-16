@@ -1,72 +1,85 @@
 # GitHub SaaS候補スカウター
 
-GitHub APIをクローリングし、「パッケージングしてSaaSとして販売できるリポジトリ」を自動スコアリングして一覧表示するツール。
+GitHubからSaaS化可能なオープンソースリポジトリを自動クロール・スコアリングするツール。日本市場でのローカライズ価値やパッケージング容易性を自動評価し、有望なリポジトリを発見します。
 
-## 機能
+## 特徴
 
-- **自動クローリング**: 14カテゴリ（CRM, メルマガ, SEO, POS, 在庫管理, フォームビルダー, 予約システム等）のGitHubリポジトリを毎日自動収集
-- **スコアリング**: ビジネス価値・パッケージング容易性・日本市場ギャップ・メンテナンス状態の4軸で0-100点評価
-- **ダッシュボード**: フィルタ・ソート・チャート付きの一覧画面、リポジトリ詳細画面
-- **Discord通知**: 毎朝トップ10通知、スコア80以上の即時アラート
-- **CSVエクスポート**: 全データのCSVダウンロード
+- **自動クロール**: 14カテゴリ（CRM, 会計, HR, POS, 予約システム等）+ 中国語/ロシア語キーワード検索
+- **4軸スコアリング** (0-100点):
+  - ビジネス価値 (0-30): 市場規模、Star数、Fork率
+  - パッケージング容易性 (0-25): Docker対応、UI有無、ドキュメント
+  - 日本市場ギャップ (0-40): 日本語非対応度、需要、言語ボーナス（中国語/ロシア語+15）
+  - メンテナンス状態 (0-20): 更新頻度、Issue対応率
+- **多言語クローリング**: 中国語（管理系统, 商城, 小程序等）、ロシア語（управление бизнес等）キーワード対応
+- **言語ボーナス**: READMEが中国語/ロシア語のリポジトリは日本市場ギャップスコア+15（言語の壁が参入障壁）
+- **ダッシュボード**: チャート、フィルタ（カテゴリ/言語/README言語/スコア）、CSV出力、ステータス管理
+- **Discord通知**: 高スコアアラート、デイリーTOP10
 
 ## セットアップ
 
-### 前提条件
-
+### 必要条件
 - Node.js 20+
 - GitHub Personal Access Token
 
 ### インストール
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Naoki-AI0420/github-saas-scouter.git
 cd github-saas-scouter
-cp .env.example .env
-# .env を編集してGITHUB_TOKENを設定
 npm install
+cp .env.example .env
+# .env を編集して GITHUB_TOKEN を設定
 ```
 
 ### 起動
 
 ```bash
+# サーバー起動（ダッシュボード + API + Cron）
 npm start
-# http://localhost:3000 でダッシュボードにアクセス
-```
 
-### 手動クローリング
-
-```bash
+# 手動クロール実行
 npm run crawl
+
+# Discord通知テスト
+npm run notify
 ```
 
 ### Docker
 
 ```bash
-docker-compose up -d
+cp .env.example .env
+# .env を編集
+docker compose up -d
 ```
 
-### テスト
+## 環境変数
+
+| 変数 | 説明 | デフォルト |
+|------|------|-----------|
+| `GITHUB_TOKEN` | GitHub Personal Access Token（必須） | - |
+| `DISCORD_WEBHOOK_URL` | Discord Webhook URL（任意） | - |
+| `PORT` | サーバーポート | 3000 |
+| `CRAWL_CRON` | クロール実行スケジュール | `0 18 * * *` (JST 3:00) |
+| `NOTIFY_CRON` | 通知スケジュール | `0 0 * * *` (JST 9:00) |
+
+## API
+
+| エンドポイント | 説明 |
+|---|---|
+| `GET /api/repositories` | リポジトリ一覧（フィルタ: category, language, readmeLang, minStars, minScore） |
+| `GET /api/repositories/:id` | リポジトリ詳細 |
+| `PATCH /api/repositories/:id/status` | ステータス更新 |
+| `GET /api/stats` | 統計 |
+| `GET /api/categories` | カテゴリ一覧 |
+| `GET /api/languages` | 言語一覧 |
+| `GET /api/export/csv` | CSVエクスポート |
+
+## テスト
 
 ```bash
 npm test
 ```
 
-## スコアリング基準
+## ライセンス
 
-| カテゴリ | 配点 | 説明 |
-|---------|------|------|
-| ビジネス価値 | 0-30 | 市場規模、Star数、Fork率 |
-| パッケージング容易性 | 0-25 | UI有無、Docker対応、ドキュメント |
-| 日本市場ギャップ | 0-25 | 日本語非対応×日本需要 |
-| メンテナンス状態 | 0-20 | 最終更新日、Issue対応率 |
-
-## 環境変数
-
-| 変数 | 必須 | 説明 |
-|------|------|------|
-| `GITHUB_TOKEN` | ✅ | GitHub Personal Access Token |
-| `DISCORD_WEBHOOK_URL` | | Discord Webhook URL |
-| `PORT` | | サーバーポート（デフォルト: 3000） |
-| `CRAWL_CRON` | | クローリングスケジュール（デフォルト: 毎日3:00 JST） |
-| `NOTIFY_CRON` | | 通知スケジュール（デフォルト: 毎朝9:00 JST） |
+MIT

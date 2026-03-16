@@ -1,7 +1,7 @@
 const { Octokit } = require('octokit');
 const Repository = require('../models/repository');
 const { getDb } = require('../models/database');
-const { scoreRepository } = require('./scorer');
+const { scoreRepository, detectReadmeLanguage } = require('./scorer');
 
 const CATEGORIES = {
   crm: { query: 'crm customer relationship management', label: 'CRM' },
@@ -127,6 +127,9 @@ async function crawlCategory(octokit, categoryKey) {
           closed_issues: 0,
           category: cat.label,
         };
+
+        // Detect README language
+        repoData.readme_lang = detectReadmeLanguage(repoData);
 
         // Calculate scores
         const scores = scoreRepository(repoData);

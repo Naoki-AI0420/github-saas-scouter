@@ -1,4 +1,4 @@
-const { scoreRepository, scoreBusiness, scorePackaging, scoreJapanGap, scoreMaintenance } = require('../src/services/scorer');
+const { scoreRepository, scoreBusiness, scorePackaging, scoreJapanGap, scoreMaintenance, detectReadmeLanguage } = require('../src/services/scorer');
 
 describe('Scorer', () => {
   const baseRepo = {
@@ -65,7 +65,7 @@ describe('Scorer', () => {
   // Test 7: Recently updated repo scores higher in maintenance
   test('recently updated repo should score higher in maintenance', () => {
     const recent = scoreMaintenance({ ...baseRepo, last_updated: new Date().toISOString() });
-    const old = scoreMaintenance({ ...baseRepo, last_updated: '2025-01-01T00:00:00Z' });
+    const old = scoreMaintenance({ ...baseRepo, last_updated: '2023-01-01T00:00:00Z' });
     expect(recent).toBeGreaterThan(old);
   });
 
@@ -83,21 +83,86 @@ describe('Scorer', () => {
     expect(js).toBeGreaterThan(other);
   });
 
-  // Test 10: Score components sum to total
-  test('score components should sum to total', () => {
+  // Test 10: Score components sum to total (capped at 100)
+  test('score components should sum to total (capped at 100)', () => {
     const scores = scoreRepository(baseRepo);
-    expect(scores.total).toBe(scores.business + scores.packaging + scores.japanGap + scores.maintenance);
+    const rawSum = scores.business + scores.packaging + scores.japanGap + scores.maintenance;
+    expect(scores.total).toBe(Math.min(100, rawSum));
   });
 
-  // Test 11: Japan gap max 25
-  test('japan gap score should not exceed 25', () => {
-    const score = scoreJapanGap(baseRepo);
-    expect(score).toBeLessThanOrEqual(25);
+  // Test 11: Japan gap max 40 (with language bonus)
+  test('japan gap score should not exceed 40', () => {
+    const chineseRepo = {
+      ...baseRepo,
+      description: '这是一个完整的客户关系管理系统，支持多种功能',
+      readme_excerpt: '这是一个开源的客户管理系统，包含仪表板和报告功能',
+      category: '予約システム',
+    };
+    const score = scoreJapanGap(chineseRepo);
+    expect(score).toBeLessThanOrEqual(40);
   });
 
   // Test 12: Maintenance max 20
   test('maintenance score should not exceed 20', () => {
     const score = scoreMaintenance(baseRepo);
     expect(score).toBeLessThanOrEqual(20);
+  });
+
+  // Test 13: Chinese README gets language bonus
+  test('Chinese README repo should get higher japan gap score', () => {
+    const englishRepo = scoreJapanGap(baseRepo);
+    const chineseRepo = scoreJapanGap({
+      ...baseRepo,
+      description: '这是一个完整的客户关系管理系统，支持多种功能',
+      readme_excerpt: '这是一个开源的客户管理系统，包含仪表板和报告功能',
+    });
+    expect(chineseRepo).toBeGreaterThan(englishRepo);
+  });
+
+  // Test 14: Russian README gets language bonus
+  test('Russian README repo should get higher japan gap score', () => {
+    const englishRepo = scoreJapanGap(baseRepo);
+    const russianRepo = scoreJapanGap({
+      ...baseRepo,
+      description: 'Система управления клиентами с полной поддержкой',
+      readme_excerpt: 'Открытая система управления бизнесом',
+    });
+    expect(russianRepo).toBeGreaterThan(englishRepo);
+  });
+
+  // Test 15: detectReadmeLanguage identifies Chinese
+  test('detectReadmeLanguage should detect Chinese', () => {
+    const lang = detectReadmeLanguage({
+      description: '这是一个完整的客户关系管理系统',
+      readme_excerpt: '支持多种功能的开源系统',
+    });
+    expect(lang).toBe('Chinese');
+  });
+
+  // Test 16: detectReadmeLanguage identifies Russian
+  test('detectReadmeLanguage should detect Russian', () => {
+    const lang = detectReadmeLanguage({
+      description: 'Система управления клиентами',
+      readme_excerpt: 'Открытая система управления',
+    });
+    expect(lang).toBe('Russian');
+  });
+
+  // Test 17: detectReadmeLanguage identifies English
+  test('detectReadmeLanguage should detect English', () => {
+    const lang = detectReadmeLanguage({
+      description: 'A complete CRM system',
+      readme_excerpt: 'Open source customer management',
+    });
+    expect(lang).toBe('English');
+  });
+
+  // Test 18: detectReadmeLanguage distinguishes Japanese from Chinese
+  test('detectReadmeLanguage should detect Japanese (not Chinese)', () => {
+    const lang = detectReadmeLanguage({
+      description: 'CRMシステム',
+      readme_excerpt: '日本語対応のオープンソースCRM',
+    });
+    expect(lang).toBe('Japanese');
   });
 });

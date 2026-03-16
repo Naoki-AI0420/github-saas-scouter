@@ -44,7 +44,7 @@ function scoreRepository(repo) {
     packaging,
     japanGap,
     maintenance,
-    total: business + packaging + japanGap + maintenance,
+    total: Math.min(100, business + packaging + japanGap + maintenance),
   };
 }
 
@@ -131,7 +131,41 @@ function scoreJapanGap(repo) {
     score += 3;
   }
 
-  return Math.min(25, score);
+  // 言語ボーナス: README/説明が中国語 or ロシア語 → 日本企業が見つけにくい = 参入障壁
+  const readmeLang = detectReadmeLanguage(repo);
+  if (readmeLang === 'Chinese' || readmeLang === 'Russian') {
+    score += 15;
+  }
+
+  return Math.min(40, score);
+}
+
+/**
+ * READMEの主要言語を検出
+ */
+function detectReadmeLanguage(repo) {
+  const text = `${repo.description || ''} ${repo.readme_excerpt || ''}`;
+
+  // 中国語: 簡体字・繁体字の頻出文字
+  const chineseChars = text.match(/[\u4e00-\u9fff]/g) || [];
+  // 日本語のひらがな・カタカナがあれば日本語扱い
+  const japaneseKana = text.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || [];
+  // 中国語文字が多く、ひらがな・カタカナがなければ中国語
+  if (chineseChars.length > 10 && japaneseKana.length === 0) {
+    return 'Chinese';
+  }
+
+  // ロシア語: キリル文字
+  const cyrillicChars = text.match(/[\u0400-\u04ff]/g) || [];
+  if (cyrillicChars.length > 10) {
+    return 'Russian';
+  }
+
+  if (japaneseKana.length > 0) {
+    return 'Japanese';
+  }
+
+  return 'English';
 }
 
 /**
@@ -168,4 +202,4 @@ function scoreMaintenance(repo) {
   return Math.min(20, score);
 }
 
-module.exports = { scoreRepository, scoreBusiness, scorePackaging, scoreJapanGap, scoreMaintenance, MARKET_SIZE, JAPAN_HIGH_DEMAND };
+module.exports = { scoreRepository, scoreBusiness, scorePackaging, scoreJapanGap, scoreMaintenance, detectReadmeLanguage, MARKET_SIZE, JAPAN_HIGH_DEMAND };

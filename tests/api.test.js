@@ -37,6 +37,7 @@ describe('Repository Model & API', () => {
     open_issues: 30,
     closed_issues: 100,
     category: 'CRM',
+    readme_lang: 'English',
     score_business: 25,
     score_packaging: 20,
     score_japan_gap: 22,
@@ -130,5 +131,26 @@ describe('Repository Model & API', () => {
     for (let i = 1; i < csv.length; i++) {
       expect(csv[i - 1].score_total).toBeGreaterThanOrEqual(csv[i].score_total);
     }
+  });
+
+  // Test 12: Filter by readmeLang
+  test('findAll with readmeLang filter should work', () => {
+    Repository.upsert({
+      ...sampleRepo,
+      github_id: 88888,
+      full_name: 'test/chinese-repo',
+      name: 'chinese-repo',
+      readme_lang: 'Chinese',
+      score_total: 75,
+    });
+    const repos = Repository.findAll({ readmeLang: 'Chinese' });
+    expect(repos.length).toBeGreaterThanOrEqual(1);
+    expect(repos.every(r => r.readme_lang === 'Chinese')).toBe(true);
+  });
+
+  // Test 13: Count with readmeLang filter
+  test('count with readmeLang filter should work', () => {
+    const count = Repository.count({ readmeLang: 'English' });
+    expect(count).toBeGreaterThanOrEqual(1);
   });
 });

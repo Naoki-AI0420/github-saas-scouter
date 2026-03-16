@@ -8,13 +8,13 @@ const Repository = {
         github_id, full_name, name, description, stars, forks,
         license, language, last_updated, topics, readme_excerpt,
         has_docker, has_ui, has_docs, open_issues, closed_issues,
-        category, score_business, score_packaging, score_japan_gap,
+        category, readme_lang, score_business, score_packaging, score_japan_gap,
         score_maintenance, score_total, last_crawled
       ) VALUES (
         @github_id, @full_name, @name, @description, @stars, @forks,
         @license, @language, @last_updated, @topics, @readme_excerpt,
         @has_docker, @has_ui, @has_docs, @open_issues, @closed_issues,
-        @category, @score_business, @score_packaging, @score_japan_gap,
+        @category, @readme_lang, @score_business, @score_packaging, @score_japan_gap,
         @score_maintenance, @score_total, datetime('now')
       )
       ON CONFLICT(github_id) DO UPDATE SET
@@ -32,6 +32,7 @@ const Repository = {
         open_issues = excluded.open_issues,
         closed_issues = excluded.closed_issues,
         category = excluded.category,
+        readme_lang = excluded.readme_lang,
         score_business = excluded.score_business,
         score_packaging = excluded.score_packaging,
         score_japan_gap = excluded.score_japan_gap,
@@ -42,13 +43,14 @@ const Repository = {
     return stmt.run(repo);
   },
 
-  findAll({ category, language, minStars, minScore, limit = 50, offset = 0, sort = 'score_total', order = 'DESC' } = {}) {
+  findAll({ category, language, readmeLang, minStars, minScore, limit = 50, offset = 0, sort = 'score_total', order = 'DESC' } = {}) {
     const db = getDb();
     const conditions = [];
     const params = {};
 
     if (category) { conditions.push('category = @category'); params.category = category; }
     if (language) { conditions.push('language = @language'); params.language = language; }
+    if (readmeLang) { conditions.push('readme_lang = @readmeLang'); params.readmeLang = readmeLang; }
     if (minStars) { conditions.push('stars >= @minStars'); params.minStars = minStars; }
     if (minScore) { conditions.push('score_total >= @minScore'); params.minScore = minScore; }
 
@@ -64,13 +66,14 @@ const Repository = {
     return db.prepare(sql).all(params);
   },
 
-  count({ category, language, minStars, minScore } = {}) {
+  count({ category, language, readmeLang, minStars, minScore } = {}) {
     const db = getDb();
     const conditions = [];
     const params = {};
 
     if (category) { conditions.push('category = @category'); params.category = category; }
     if (language) { conditions.push('language = @language'); params.language = language; }
+    if (readmeLang) { conditions.push('readme_lang = @readmeLang'); params.readmeLang = readmeLang; }
     if (minStars) { conditions.push('stars >= @minStars'); params.minStars = minStars; }
     if (minScore) { conditions.push('score_total >= @minScore'); params.minScore = minScore; }
 

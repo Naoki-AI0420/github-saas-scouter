@@ -5,10 +5,11 @@ const router = express.Router();
 
 // リポジトリ一覧
 router.get('/repositories', (req, res) => {
-  const { category, language, minStars, minScore, limit, offset, sort, order } = req.query;
+  const { category, language, readmeLang, minStars, minScore, limit, offset, sort, order } = req.query;
   const repos = Repository.findAll({
     category,
     language,
+    readmeLang,
     minStars: minStars ? parseInt(minStars) : undefined,
     minScore: minScore ? parseInt(minScore) : undefined,
     limit: limit ? parseInt(limit) : 50,
@@ -19,6 +20,7 @@ router.get('/repositories', (req, res) => {
   const total = Repository.count({
     category,
     language,
+    readmeLang,
     minStars: minStars ? parseInt(minStars) : undefined,
     minScore: minScore ? parseInt(minScore) : undefined,
   });

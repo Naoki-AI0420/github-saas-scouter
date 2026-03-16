@@ -69,6 +69,13 @@
     <div class="filters">
       <select id="filter-category"><option value="">全カテゴリ</option></select>
       <select id="filter-language"><option value="">全言語</option></select>
+      <select id="filter-readme-lang">
+        <option value="">全README言語</option>
+        <option value="English">English</option>
+        <option value="Chinese">Chinese</option>
+        <option value="Russian">Russian</option>
+        <option value="Other">Other</option>
+      </select>
       <input type="number" id="filter-min-score" placeholder="最低スコア" min="0" max="100" style="width:100px">
       <input type="number" id="filter-min-stars" placeholder="最低Star数" min="0" style="width:110px">
       <button onclick="applyFilters()">フィルタ適用</button>
@@ -193,10 +200,12 @@
       });
       const cat = document.getElementById('filter-category').value;
       const lang = document.getElementById('filter-language').value;
+      const readmeLang = document.getElementById('filter-readme-lang').value;
       const minScore = document.getElementById('filter-min-score').value;
       const minStars = document.getElementById('filter-min-stars').value;
       if (cat) params.set('category', cat);
       if (lang) params.set('language', lang);
+      if (readmeLang) params.set('readmeLang', readmeLang);
       if (minScore) params.set('minScore', minScore);
       if (minStars) params.set('minStars', minStars);
 
@@ -262,6 +271,7 @@
     function resetFilters() {
       document.getElementById('filter-category').value = '';
       document.getElementById('filter-language').value = '';
+      document.getElementById('filter-readme-lang').value = '';
       document.getElementById('filter-min-score').value = '';
       document.getElementById('filter-min-stars').value = '';
       currentPage = 0;

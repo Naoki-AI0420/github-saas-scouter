@@ -40,6 +40,7 @@ function initTables(db) {
       score_japan_gap INTEGER DEFAULT 0,
       score_maintenance INTEGER DEFAULT 0,
       score_total INTEGER DEFAULT 0,
+      readme_lang TEXT DEFAULT 'English',
       status TEXT DEFAULT 'new',
       first_seen TEXT DEFAULT (datetime('now')),
       last_crawled TEXT DEFAULT (datetime('now')),
