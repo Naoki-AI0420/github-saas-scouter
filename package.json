@@ -1,0 +1,26 @@
+{
+  "name": "github-saas-scouter",
+  "version": "1.0.0",
+  "description": "GitHub SaaS候補スカウター - パッケージングして販売できるリポジトリを自動スコアリング",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "crawl": "node src/scripts/crawl.js",
+    "notify": "node src/scripts/notify.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "node-cron": "^3.0.3",
+    "octokit": "^4.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.0"
+  }
+}

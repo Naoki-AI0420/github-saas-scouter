@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub SaaS候補スカウター</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    h1 { color: #58a6ff; margin-bottom: 20px; font-size: 24px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
+    .stat-card .label { font-size: 12px; color: #8b949e; text-transform: uppercase; }
+    .stat-card .value { font-size: 32px; font-weight: bold; color: #58a6ff; margin-top: 4px; }
+    .filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .filters select, .filters input { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+    .filters button { background: #238636; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .filters button:hover { background: #2ea043; }
+    .filters button.secondary { background: #30363d; }
+    table { width: 100%; border-collapse: collapse; background: #161b22; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #21262d; }
+    th { background: #0d1117; color: #8b949e; font-size: 12px; text-transform: uppercase; cursor: pointer; }
+    th:hover { color: #58a6ff; }
+    tr:hover { background: #1c2128; }
+    .score { font-weight: bold; font-size: 16px; }
+    .score.high { color: #f85149; }
+    .score.mid { color: #d29922; }
+    .score.low { color: #3fb950; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+    .badge-new { background: #1f6feb33; color: #58a6ff; }
+    .badge-reviewing { background: #d2992233; color: #d29922; }
+    .badge-in_progress { background: #23863633; color: #3fb950; }
+    .badge-done { background: #3fb95033; color: #3fb950; }
+    .badge-selling { background: #f8514933; color: #f85149; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .chart-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
+    .chart-card h3 { color: #8b949e; font-size: 14px; margin-bottom: 12px; }
+    .new-today { background: #1f6feb22; border: 1px solid #1f6feb; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .new-today h2 { color: #58a6ff; font-size: 16px; margin-bottom: 8px; }
+    .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+    .pagination button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+    .pagination button.active { background: #1f6feb; border-color: #1f6feb; }
+    .score-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; width: 120px; background: #21262d; }
+    .score-bar div { height: 100%; }
+    .sb-biz { background: #58a6ff; }
+    .sb-pkg { background: #3fb950; }
+    .sb-jp { background: #d29922; }
+    .sb-mnt { background: #f85149; }
+    @media (max-width: 768px) { .charts-row { grid-template-columns: 1fr; } .filters { flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 GitHub SaaS候補スカウター</h1>
+
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <div id="new-today-section"></div>
+
+    <div class="charts-row">
+      <div class="chart-card"><h3>カテゴリ別平均スコア</h3><canvas id="categoryChart"></canvas></div>
+      <div class="chart-card"><h3>言語分布</h3><canvas id="languageChart"></canvas></div>
+    </div>
+
+    <div class="filters">
+      <select id="filter-category"><option value="">全カテゴリ</option></select>
+      <select id="filter-language"><option value="">全言語</option></select>
+      <input type="number" id="filter-min-score" placeholder="最低スコア" min="0" max="100" style="width:100px">
+      <input type="number" id="filter-min-stars" placeholder="最低Star数" min="0" style="width:110px">
+      <button onclick="applyFilters()">フィルタ適用</button>
+      <button class="secondary" onclick="resetFilters()">リセット</button>
+      <button class="secondary" onclick="exportCsv()">📥 CSV出力</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('score_total')">Score</th>
+          <th>リポジトリ</th>
+          <th>カテゴリ</th>
+          <th onclick="sortBy('stars')">Stars</th>
+          <th>言語</th>
+          <th>ライセンス</th>
+          <th>スコア内訳</th>
+          <th>ステータス</th>
+        </tr>
+      </thead>
+      <tbody id="repo-table"></tbody>
+    </table>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <script>
+    let currentSort = 'score_total';
+    let currentOrder = 'DESC';
+    let currentPage = 0;
+    const PAGE_SIZE = 50;
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      return res.json();
+    }
+
+    function scoreClass(score) {
+      if (score >= 80) return 'high';
+      if (score >= 50) return 'mid';
+      return 'low';
+    }
+
+    async function loadStats() {
+      const stats = await fetchJson('/api/stats');
+      document.getElementById('stats-grid').innerHTML = `
+        <div class="stat-card"><div class="label">総リポジトリ数</div><div class="value">${stats.total}</div></div>
+        <div class="stat-card"><div class="label">今日の新着</div><div class="value">${stats.newToday}</div></div>
+        <div class="stat-card"><div class="label">平均スコア</div><div class="value">${stats.avgScore}</div></div>
+        <div class="stat-card"><div class="label">スコア80+</div><div class="value">${stats.highScore}</div></div>
+      `;
+
+      // Category chart
+      if (stats.byCategory.length) {
+        new Chart(document.getElementById('categoryChart'), {
+          type: 'bar',
+          data: {
+            labels: stats.byCategory.map(c => c.category),
+            datasets: [{
+              label: '平均スコア',
+              data: stats.byCategory.map(c => c.avg_score),
+              backgroundColor: '#58a6ff88',
+              borderColor: '#58a6ff',
+              borderWidth: 1,
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#8b949e' } }, x: { ticks: { color: '#8b949e', font: { size: 10 } } } } }
+        });
+      }
+
+      // Language chart
+      if (stats.byLanguage.length) {
+        new Chart(document.getElementById('languageChart'), {
+          type: 'doughnut',
+          data: {
+            labels: stats.byLanguage.map(l => l.language),
+            datasets: [{
+              data: stats.byLanguage.map(l => l.count),
+              backgroundColor: ['#58a6ff', '#3fb950', '#d29922', '#f85149', '#bc8cff', '#79c0ff', '#7ee787', '#e3b341', '#ffa198', '#d2a8ff'],
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { position: 'right', labels: { color: '#c9d1d9', font: { size: 11 } } } } }
+        });
+      }
+    }
+
+    async function loadNewToday() {
+      const repos = await fetchJson('/api/repositories/new-today');
+      if (!repos.length) return;
+      const section = document.getElementById('new-today-section');
+      section.innerHTML = `
+        <div class="new-today">
+          <h2>🆕 今日の新着候補 (${repos.length}件)</h2>
+          ${repos.slice(0, 5).map(r => `
+            <div style="margin:4px 0">
+              <span class="score ${scoreClass(r.score_total)}">${r.score_total}</span>
+              <a href="/repo/${r.id}">${r.full_name}</a> - ${r.category} / ${r.language}
+            </div>
+          `).join('')}
+          ${repos.length > 5 ? `<div style="color:#8b949e;margin-top:4px">...他${repos.length - 5}件</div>` : ''}
+        </div>
+      `;
+    }
+
+    async function loadFilters() {
+      const [categories, languages] = await Promise.all([
+        fetchJson('/api/categories'),
+        fetchJson('/api/languages'),
+      ]);
+      const catSelect = document.getElementById('filter-category');
+      categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSelect.appendChild(o); });
+      const langSelect = document.getElementById('filter-language');
+      languages.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; langSelect.appendChild(o); });
+    }
+
+    async function loadRepos() {
+      const params = new URLSearchParams({
+        sort: currentSort,
+        order: currentOrder,
+        limit: PAGE_SIZE,
+        offset: currentPage * PAGE_SIZE,
+      });
+      const cat = document.getElementById('filter-category').value;
+      const lang = document.getElementById('filter-language').value;
+      const minScore = document.getElementById('filter-min-score').value;
+      const minStars = document.getElementById('filter-min-stars').value;
+      if (cat) params.set('category', cat);
+      if (lang) params.set('language', lang);
+      if (minScore) params.set('minScore', minScore);
+      if (minStars) params.set('minStars', minStars);
+
+      const result = await fetchJson(`/api/repositories?${params}`);
+      const tbody = document.getElementById('repo-table');
+      tbody.innerHTML = result.data.map(r => `
+        <tr>
+          <td><span class="score ${scoreClass(r.score_total)}">${r.score_total}</span></td>
+          <td>
+            <a href="/repo/${r.id}"><strong>${r.name}</strong></a><br>
+            <small style="color:#8b949e">${(r.description || '').substring(0, 80)}</small>
+          </td>
+          <td>${r.category}</td>
+          <td>⭐ ${r.stars.toLocaleString()}</td>
+          <td>${r.language}</td>
+          <td>${r.license}</td>
+          <td>
+            <div class="score-bar">
+              <div class="sb-biz" style="width:${r.score_business / 30 * 100}%"></div>
+              <div class="sb-pkg" style="width:${r.score_packaging / 25 * 100}%"></div>
+              <div class="sb-jp" style="width:${r.score_japan_gap / 25 * 100}%"></div>
+              <div class="sb-mnt" style="width:${r.score_maintenance / 20 * 100}%"></div>
+            </div>
+            <small style="color:#8b949e">B:${r.score_business} P:${r.score_packaging} J:${r.score_japan_gap} M:${r.score_maintenance}</small>
+          </td>
+          <td>
+            <select class="badge badge-${r.status}" onchange="updateStatus(${r.id}, this.value)" style="background:#161b22;border:1px solid #30363d;color:inherit;padding:4px;border-radius:4px;">
+              <option value="new" ${r.status === 'new' ? 'selected' : ''}>未着手</option>
+              <option value="reviewing" ${r.status === 'reviewing' ? 'selected' : ''}>検討中</option>
+              <option value="in_progress" ${r.status === 'in_progress' ? 'selected' : ''}>進行中</option>
+              <option value="done" ${r.status === 'done' ? 'selected' : ''}>完了</option>
+              <option value="selling" ${r.status === 'selling' ? 'selected' : ''}>販売中</option>
+            </select>
+          </td>
+        </tr>
+      `).join('');
+
+      // Pagination
+      const totalPages = Math.ceil(result.total / PAGE_SIZE);
+      const pag = document.getElementById('pagination');
+      pag.innerHTML = '';
+      for (let i = 0; i < totalPages && i < 10; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i + 1;
+        btn.className = i === currentPage ? 'active' : '';
+        btn.onclick = () => { currentPage = i; loadRepos(); };
+        pag.appendChild(btn);
+      }
+    }
+
+    function sortBy(field) {
+      if (currentSort === field) {
+        currentOrder = currentOrder === 'DESC' ? 'ASC' : 'DESC';
+      } else {
+        currentSort = field;
+        currentOrder = 'DESC';
+      }
+      currentPage = 0;
+      loadRepos();
+    }
+
+    function applyFilters() { currentPage = 0; loadRepos(); }
+    function resetFilters() {
+      document.getElementById('filter-category').value = '';
+      document.getElementById('filter-language').value = '';
+      document.getElementById('filter-min-score').value = '';
+      document.getElementById('filter-min-stars').value = '';
+      currentPage = 0;
+      loadRepos();
+    }
+
+    async function updateStatus(id, status) {
+      await fetch(`/api/repositories/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+    }
+
+    function exportCsv() {
+      window.location.href = '/api/export/csv';
+    }
+
+    // Init
+    loadStats();
+    loadNewToday();
+    loadFilters();
+    loadRepos();
+  </script>
+</body>
+</html>

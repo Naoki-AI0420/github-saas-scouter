@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>リポジトリ詳細 - GitHub SaaS候補スカウター</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back { margin-bottom: 16px; display: inline-block; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .header h1 { color: #58a6ff; font-size: 28px; }
+    .score-big { font-size: 48px; font-weight: bold; }
+    .score-big.high { color: #f85149; }
+    .score-big.mid { color: #d29922; }
+    .score-big.low { color: #3fb950; }
+    .meta { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
+    .meta span { background: #21262d; padding: 4px 12px; border-radius: 16px; font-size: 13px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
+    .card h3 { color: #8b949e; font-size: 14px; margin-bottom: 12px; text-transform: uppercase; }
+    .score-detail { margin: 8px 0; }
+    .score-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+    .score-track { height: 8px; background: #21262d; border-radius: 4px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 4px; }
+    .readme-box { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-top: 12px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    .strategy-box { background: #1f6feb11; border: 1px solid #1f6feb44; border-radius: 8px; padding: 16px; margin-top: 12px; }
+    .strategy-box h4 { color: #58a6ff; margin-bottom: 8px; }
+    .strategy-box ul { padding-left: 20px; }
+    .strategy-box li { margin: 4px 0; font-size: 14px; }
+    .actions { margin-top: 24px; display: flex; gap: 12px; }
+    .actions select, .actions a { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 10px 16px; border-radius: 6px; font-size: 14px; }
+    .actions .primary { background: #238636; border-color: #238636; color: white; display: inline-block; padding: 10px 20px; }
+    .topics { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .topic { background: #1f6feb33; color: #58a6ff; padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back">← ダッシュボードに戻る</a>
+    <div id="content">読み込み中...</div>
+  </div>
+  <script>
+    const repoId = window.location.pathname.split('/').pop();
+
+    function scoreClass(s) { return s >= 80 ? 'high' : s >= 50 ? 'mid' : 'low'; }
+
+    function getStrategy(repo) {
+      const strategies = [];
+      if (!repo.has_ui) strategies.push('UIダッシュボードを追加してSaaS化');
+      if (!repo.has_docker) strategies.push('Docker化してデプロイを容易にする');
+      strategies.push('日本語ローカライズ（UI、ドキュメント）');
+      if (repo.category === '予約システム' || repo.category === 'POS') strategies.push('日本の決済サービス連携（Stripe JP、PAY.JP）');
+      if (repo.category === '請求書' || repo.category === '会計') strategies.push('インボイス制度対応、e-Tax連携');
+      if (repo.category === 'HR/勤怠') strategies.push('日本の労働基準法準拠の勤怠管理機能');
+      strategies.push('マルチテナント対応（SaaS基盤）');
+      strategies.push('Stripe課金統合（月額サブスクリプション）');
+      strategies.push('カスタマーサポート / オンボーディングフロー');
+      return strategies;
+    }
+
+    async function load() {
+      const res = await fetch(`/api/repositories/${repoId}`);
+      if (!res.ok) { document.getElementById('content').textContent = 'リポジトリが見つかりません'; return; }
+      const r = await res.json();
+      const topics = JSON.parse(r.topics || '[]');
+      const strategies = getStrategy(r);
+
+      document.title = `${r.full_name} - GitHub SaaS候補スカウター`;
+      document.getElementById('content').innerHTML = `
+        <div class="header">
+          <div>
+            <h1>${r.full_name}</h1>
+            <p style="color:#8b949e;margin-top:4px">${r.description || ''}</p>
+            <div class="meta">
+              <span>⭐ ${r.stars.toLocaleString()}</span>
+              <span>🍴 ${r.forks.toLocaleString()}</span>
+              <span>📝 ${r.license}</span>
+              <span>💻 ${r.language}</span>
+              <span>📁 ${r.category}</span>
+              <span>${r.has_docker ? '🐳 Docker' : '❌ No Docker'}</span>
+              <span>${r.has_ui ? '🖥 UI有' : '❌ UI無'}</span>
+            </div>
+            <div class="topics">${topics.map(t => `<span class="topic">${t}</span>`).join('')}</div>
+          </div>
+          <div style="text-align:center">
+            <div class="score-big ${scoreClass(r.score_total)}">${r.score_total}</div>
+            <div style="color:#8b949e;font-size:12px">/100点</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>スコア内訳</h3>
+            <canvas id="radarChart" height="200"></canvas>
+            <div class="score-detail">
+              <div class="score-label"><span>ビジネス価値</span><span>${r.score_business}/30</span></div>
+              <div class="score-track"><div class="score-fill" style="width:${r.score_business/30*100}%;background:#58a6ff"></div></div>
+            </div>
+            <div class="score-detail">
+              <div class="score-label"><span>パッケージング容易性</span><span>${r.score_packaging}/25</span></div>
+              <div class="score-track"><div class="score-fill" style="width:${r.score_packaging/25*100}%;background:#3fb950"></div></div>
+            </div>
+            <div class="score-detail">
+              <div class="score-label"><span>日本市場ギャップ</span><span>${r.score_japan_gap}/25</span></div>
+              <div class="score-track"><div class="score-fill" style="width:${r.score_japan_gap/25*100}%;background:#d29922"></div></div>
+            </div>
+            <div class="score-detail">
+              <div class="score-label"><span>メンテナンス状態</span><span>${r.score_maintenance}/20</span></div>
+              <div class="score-track"><div class="score-fill" style="width:${r.score_maintenance/20*100}%;background:#f85149"></div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>推奨パッケージング戦略</h3>
+            <div class="strategy-box">
+              <h4>SaaS化ステップ</h4>
+              <ul>${strategies.map(s => `<li>${s}</li>`).join('')}</ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:24px">
+          <h3>README（冒頭）</h3>
+          <div class="readme-box">${escapeHtml(r.readme_excerpt || 'README情報なし')}</div>
+        </div>
+
+        <div class="actions">
+          <select onchange="updateStatus(this.value)">
+            <option value="new" ${r.status==='new'?'selected':''}>未着手</option>
+            <option value="reviewing" ${r.status==='reviewing'?'selected':''}>検討中</option>
+            <option value="in_progress" ${r.status==='in_progress'?'selected':''}>進行中</option>
+            <option value="done" ${r.status==='done'?'selected':''}>完了</option>
+            <option value="selling" ${r.status==='selling'?'selected':''}>販売中</option>
+          </select>
+          <a href="https://github.com/${r.full_name}" target="_blank" class="primary">GitHubで開く</a>
+        </div>
+      `;
+
+      new Chart(document.getElementById('radarChart'), {
+        type: 'radar',
+        data: {
+          labels: ['ビジネス価値', 'パッケージング', '日本市場ギャップ', 'メンテナンス'],
+          datasets: [{
+            data: [r.score_business/30*100, r.score_packaging/25*100, r.score_japan_gap/25*100, r.score_maintenance/20*100],
+            backgroundColor: '#58a6ff22',
+            borderColor: '#58a6ff',
+            pointBackgroundColor: '#58a6ff',
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { r: { beginAtZero: true, max: 100, ticks: { color: '#8b949e' }, grid: { color: '#21262d' }, pointLabels: { color: '#c9d1d9' } } }
+        }
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async function updateStatus(status) {
+      await fetch(`/api/repositories/${repoId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+    }
+
+    load();
+  </script>
+</body>
+</html>
