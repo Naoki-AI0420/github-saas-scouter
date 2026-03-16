@@ -70,6 +70,35 @@ const CATEGORIES = {
   cn_erp: { query: 'ERP 开源 企业', label: 'ERP(CN)' },
   cn_lowcode: { query: '低代码 开源 平台', label: 'ローコード(CN)' },
   cn_ai: { query: 'AI 工具 开源 大模型', label: 'AIツール(CN)' },
+  cn_cms: { query: '内容管理 开源 CMS', label: 'CMS(CN)' },
+  cn_monitor: { query: '监控系统 开源 运维', label: '監視(CN)' },
+  cn_logistics: { query: '物流管理 开源', label: '物流(CN)' },
+  cn_invoice: { query: '发票管理 开源 财税', label: '請求/税務(CN)' },
+  // ===== 韓国語 =====
+  kr_admin: { query: '관리시스템 오픈소스', label: '管理システム(KR)' },
+  kr_ecommerce: { query: '쇼핑몰 오픈소스', label: 'ECサイト(KR)' },
+  kr_crm: { query: 'CRM 고객관리 오픈소스', label: 'CRM(KR)' },
+  kr_erp: { query: 'ERP 오픈소스 기업', label: 'ERP(KR)' },
+  // ===== スペイン語 =====
+  es_gestion: { query: 'sistema gestion empresarial código abierto', label: '企業管理(ES)' },
+  es_facturacion: { query: 'facturación electrónica código abierto', label: '電子請求(ES)' },
+  es_pos: { query: 'punto de venta código abierto', label: 'POS(ES)' },
+  es_crm: { query: 'CRM código abierto gestión clientes', label: 'CRM(ES)' },
+  // ===== ポルトガル語 =====
+  pt_gestao: { query: 'sistema gestão empresarial código aberto', label: '企業管理(PT)' },
+  pt_pdv: { query: 'PDV ponto de venda código aberto', label: 'POS(PT)' },
+  pt_erp: { query: 'ERP código aberto brasileiro', label: 'ERP(PT)' },
+  // ===== ドイツ語 =====
+  de_verwaltung: { query: 'Verwaltungssystem Open Source', label: '管理システム(DE)' },
+  de_buchhaltung: { query: 'Buchhaltung Rechnungen Open Source', label: '会計(DE)' },
+  // ===== トルコ語 =====
+  tr_yonetim: { query: 'yönetim sistemi açık kaynak', label: '管理システム(TR)' },
+  // ===== ベトナム語 =====
+  vn_quanly: { query: 'hệ thống quản lý mã nguồn mở', label: '管理システム(VN)' },
+  // ===== インドネシア語 =====
+  id_manajemen: { query: 'sistem manajemen open source', label: '管理システム(ID)' },
+  // ===== タイ語 =====
+  th_system: { query: 'ระบบจัดการ open source', label: '管理システム(TH)' },
 };
 
 const SIX_MONTHS_AGO = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

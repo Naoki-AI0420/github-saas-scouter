@@ -52,7 +52,7 @@ async function sendHighScoreAlert(webhookUrl, repo) {
 
 async function sendNewHighScoreAlerts(webhookUrl) {
   const newToday = Repository.getNewToday();
-  const highScore = newToday.filter(r => r.score_total >= 80);
+  const highScore = newToday.filter(r => r.score_total >= 70);
 
   for (const repo of highScore) {
     await sendHighScoreAlert(webhookUrl, repo);
