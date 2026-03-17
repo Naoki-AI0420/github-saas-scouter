@@ -28,6 +28,12 @@ app.get('/repo/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'views/detail.html'));
 });
 
+// 検索ページ（/search?q=... → ダッシュボードにリダイレクト）
+app.get('/search', (req, res) => {
+  const q = req.query.q || '';
+  res.redirect(`/?q=${encodeURIComponent(q)}`);
+});
+
 // Initialize DB
 getDb();
 

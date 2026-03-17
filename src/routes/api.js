@@ -1,5 +1,6 @@
 const express = require('express');
 const Repository = require('../models/repository');
+const { search } = require('../services/searcher');
 
 const router = express.Router();
 
@@ -62,6 +63,48 @@ router.patch('/repositories/:id/status', (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// 自然言語検索
+router.post('/search', async (req, res) => {
+  const { query } = req.body;
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    return res.status(400).json({ error: 'query is required' });
+  }
+  if (!process.env.GITHUB_TOKEN) {
+    return res.status(500).json({ error: 'GITHUB_TOKEN is not configured' });
+  }
+  try {
+    const result = await search(query.trim(), {
+      token: process.env.GITHUB_TOKEN,
+      topN: 10,
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('[API] Search error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET版（ダッシュボード用）
+router.get('/search', async (req, res) => {
+  const query = req.query.q;
+  if (!query || !query.trim()) {
+    return res.status(400).json({ error: 'q parameter is required' });
+  }
+  if (!process.env.GITHUB_TOKEN) {
+    return res.status(500).json({ error: 'GITHUB_TOKEN is not configured' });
+  }
+  try {
+    const result = await search(query.trim(), {
+      token: process.env.GITHUB_TOKEN,
+      topN: 10,
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('[API] Search error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

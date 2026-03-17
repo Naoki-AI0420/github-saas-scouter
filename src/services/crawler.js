@@ -1,4 +1,5 @@
 const { Octokit } = require('octokit');
+const Anthropic = require('@anthropic-ai/sdk');
 const Repository = require('../models/repository');
 const { getDb } = require('../models/database');
 const { scoreRepository, detectReadmeLanguage } = require('./scorer');
@@ -104,10 +105,46 @@ const CATEGORIES = {
 const SIX_MONTHS_AGO = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
 /**
- * description からルールベースで日本語要約を生成
+ * Claude API で日本語解説を生成
+ * README冒頭 + description を読み取り、構造化された日本語解説を返す
+ */
+async function generateJapaneseSummaryWithAI(repoData, anthropicClient) {
+  const prompt = `以下のGitHubリポジトリについて、日本語で簡潔に解説してください。
+
+リポジトリ名: ${repoData.full_name}
+説明: ${repoData.description || 'なし'}
+言語: ${repoData.language || '不明'}
+カテゴリ: ${repoData.category || '不明'}
+Star数: ${repoData.stars}
+README冒頭:
+${(repoData.readme_excerpt || '').substring(0, 400)}
+
+以下の形式で回答してください（余計な前置きなし）:
+【概要】（何のシステムか1行で）
+【主な機能】
+・機能1
+・機能2
+・機能3
+【ビジネス活用】（どんなビジネスに使えるか1行で）`;
+
+  try {
+    const response = await anthropicClient.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    return response.content[0].text.trim();
+  } catch (e) {
+    console.error(`[Crawler] AI summary failed for ${repoData.full_name}: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * description からルールベースで日本語要約を生成（フォールバック用）
  * 「何をするものか」「なぜ売れそうか」を簡潔に返す
  */
-function generateJapaneseSummary(repoData) {
+function generateJapaneseSummaryRuleBased(repoData) {
   const desc = (repoData.description || '').toLowerCase();
   const parts = [];
 
@@ -170,7 +207,7 @@ function generateJapaneseSummary(repoData) {
   return summary;
 }
 
-async function crawlCategory(octokit, categoryKey) {
+async function crawlCategory(octokit, categoryKey, anthropicClient) {
   const cat = CATEGORIES[categoryKey];
   if (!cat) throw new Error(`Unknown category: ${categoryKey}`);
 
@@ -276,8 +313,13 @@ async function crawlCategory(octokit, categoryKey) {
         repoData.score_maintenance = scores.maintenance;
         repoData.score_total = scores.total;
 
-        // 日本語要約を生成
-        repoData.japanese_summary = generateJapaneseSummary(repoData);
+        // 日本語要約を生成（Claude API優先、なければルールベース）
+        if (anthropicClient) {
+          const aiSummary = await generateJapaneseSummaryWithAI(repoData, anthropicClient);
+          repoData.japanese_summary = aiSummary || generateJapaneseSummaryRuleBased(repoData);
+        } else {
+          repoData.japanese_summary = generateJapaneseSummaryRuleBased(repoData);
+        }
 
         Repository.upsert(repoData);
 
@@ -309,12 +351,22 @@ async function crawlCategory(octokit, categoryKey) {
 
 async function crawlAll(token) {
   const octokit = new Octokit({ auth: token });
+
+  // Anthropic client（APIキーがあれば初期化）
+  let anthropicClient = null;
+  if (process.env.ANTHROPIC_API_KEY) {
+    anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    console.log('[Crawler] Anthropic API enabled for Japanese summaries');
+  } else {
+    console.log('[Crawler] No ANTHROPIC_API_KEY - using rule-based Japanese summaries');
+  }
+
   const results = [];
 
   for (const key of Object.keys(CATEGORIES)) {
     try {
       console.log(`[Crawler] Crawling category: ${CATEGORIES[key].label}`);
-      const result = await crawlCategory(octokit, key);
+      const result = await crawlCategory(octokit, key, anthropicClient);
       results.push(result);
       console.log(`[Crawler] ${result.category}: found=${result.reposFound} new=${result.reposNew} updated=${result.reposUpdated}`);
     } catch (error) {

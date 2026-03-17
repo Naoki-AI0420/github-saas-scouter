@@ -14,19 +14,23 @@ async function sendDiscordNotification(webhookUrl, content) {
 }
 
 function formatRepoEmbed(repo, rank) {
+  const fields = [
+    { name: 'Score', value: `**${repo.score_total}**/100`, inline: true },
+    { name: 'Stars', value: `⭐ ${repo.stars}`, inline: true },
+    { name: 'Category', value: repo.category, inline: true },
+    { name: 'Language', value: repo.language || 'N/A', inline: true },
+    { name: 'License', value: repo.license || 'N/A', inline: true },
+    { name: 'Score Breakdown', value: `BIZ:${repo.score_business} PKG:${repo.score_packaging} JP:${repo.score_japan_gap} MNT:${repo.score_maintenance}`, inline: false },
+  ];
+  if (repo.japanese_summary) {
+    fields.push({ name: '日本語解説', value: repo.japanese_summary.substring(0, 1024), inline: false });
+  }
   return {
     title: `${rank ? `#${rank} ` : ''}${repo.full_name}`,
     url: `https://github.com/${repo.full_name}`,
     description: repo.description ? repo.description.substring(0, 200) : 'No description',
     color: repo.score_total >= 80 ? 0xff0000 : repo.score_total >= 60 ? 0xff8800 : 0x00aa00,
-    fields: [
-      { name: 'Score', value: `**${repo.score_total}**/100`, inline: true },
-      { name: 'Stars', value: `⭐ ${repo.stars}`, inline: true },
-      { name: 'Category', value: repo.category, inline: true },
-      { name: 'Language', value: repo.language || 'N/A', inline: true },
-      { name: 'License', value: repo.license || 'N/A', inline: true },
-      { name: 'Score Breakdown', value: `BIZ:${repo.score_business} PKG:${repo.score_packaging} JP:${repo.score_japan_gap} MNT:${repo.score_maintenance}`, inline: false },
-    ],
+    fields,
   };
 }
 

@@ -57,6 +57,14 @@
   <div class="container">
     <h1>🔍 GitHub SaaS候補スカウター</h1>
 
+    <div class="search-section" style="margin-bottom:24px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <input type="text" id="search-input" placeholder="自然言語で検索... 例：メルマガ配信を自動化したい" style="flex:1;background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:12px 16px;border-radius:8px;font-size:16px">
+        <button onclick="doSearch()" style="background:#1f6feb;color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;white-space:nowrap">検索</button>
+      </div>
+      <div id="search-results" style="margin-top:16px"></div>
+    </div>
+
     <div class="stats-grid" id="stats-grid"></div>
 
     <div id="new-today-section"></div>
@@ -290,6 +298,71 @@
 
     function exportCsv() {
       window.location.href = '/api/export/csv';
+    }
+
+    // 自然言語検索
+    async function doSearch() {
+      const q = document.getElementById('search-input').value.trim();
+      if (!q) return;
+      const container = document.getElementById('search-results');
+      container.innerHTML = '<div style="color:#8b949e;padding:12px">検索中... (英語・中国語・ロシア語で並列検索しています)</div>';
+
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.error) {
+          container.innerHTML = `<div style="color:#f85149;padding:12px">エラー: ${data.error}</div>`;
+          return;
+        }
+        if (!data.results || !data.results.length) {
+          container.innerHTML = '<div style="color:#8b949e;padding:12px">該当するリポジトリが見つかりませんでした。</div>';
+          return;
+        }
+        container.innerHTML = `
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px">
+            <div style="color:#8b949e;font-size:12px;margin-bottom:12px">
+              検索キーワード: EN="${data.keywords.en}" | CN="${data.keywords.cn}" | RU="${data.keywords.ru}" — ${data.results.length}件
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="padding:8px;text-align:left;border-bottom:1px solid #21262d;color:#8b949e;font-size:12px">Score</th>
+                <th style="padding:8px;text-align:left;border-bottom:1px solid #21262d;color:#8b949e;font-size:12px">リポジトリ</th>
+                <th style="padding:8px;text-align:left;border-bottom:1px solid #21262d;color:#8b949e;font-size:12px">日本語解説</th>
+                <th style="padding:8px;text-align:left;border-bottom:1px solid #21262d;color:#8b949e;font-size:12px">Stars</th>
+                <th style="padding:8px;text-align:left;border-bottom:1px solid #21262d;color:#8b949e;font-size:12px">言語</th>
+              </tr></thead>
+              <tbody>
+                ${data.results.map((r, i) => `
+                  <tr style="border-bottom:1px solid #21262d">
+                    <td style="padding:8px"><span class="score ${scoreClass(r.score_total)}">${r.score_total}</span></td>
+                    <td style="padding:8px">
+                      <a href="https://github.com/${r.full_name}" target="_blank"><strong>${r.full_name}</strong></a><br>
+                      <small style="color:#8b949e">${(r.description || '').substring(0, 100)}</small>
+                    </td>
+                    <td style="padding:8px"><small style="color:#e3b341;line-height:1.4">${(r.japanese_summary || '').substring(0, 150)}</small></td>
+                    <td style="padding:8px">⭐ ${r.stars.toLocaleString()}</td>
+                    <td style="padding:8px">${r.language}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `<div style="color:#f85149;padding:12px">検索エラー: ${err.message}</div>`;
+      }
+    }
+
+    // Enterキーで検索
+    document.getElementById('search-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch();
+    });
+
+    // URLパラメータから検索
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('q')) {
+      document.getElementById('search-input').value = urlParams.get('q');
+      doSearch();
     }
 
     // Init
