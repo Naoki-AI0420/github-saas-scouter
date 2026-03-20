@@ -10,7 +10,8 @@
     "notify": "node src/scripts/notify.js",
     "search": "node src/scripts/search.js",
     "test": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "postinstall": "node patch-bottleneck.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.79.0",
