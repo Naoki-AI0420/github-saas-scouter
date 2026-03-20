@@ -73,24 +73,26 @@ async function translateQueryWithAI(query, anthropicClient) {
  * ルールベースで日本語クエリをキーワードに変換（フォールバック）
  */
 function translateQueryRuleBased(query) {
-  let en = '', cn = '', ru = '';
+  const enSet = new Set(), cnSet = new Set(), ruSet = new Set();
 
   for (const [jpKey, translations] of Object.entries(KEYWORD_MAP)) {
     if (query.includes(jpKey)) {
-      en += ' ' + translations.en;
-      cn += ' ' + translations.cn;
-      ru += ' ' + translations.ru;
+      translations.en.split(' ').forEach(w => enSet.add(w));
+      translations.cn.split(' ').forEach(w => cnSet.add(w));
+      translations.ru.split(' ').forEach(w => ruSet.add(w));
     }
   }
 
+  const en = [...enSet].join(' ');
+  const cn = [...cnSet].join(' ');
+  const ru = [...ruSet].join(' ');
+
   // マッチしなかった場合、そのままクエリを英語として使用
-  if (!en.trim()) {
-    en = query;
-    cn = query;
-    ru = query;
+  if (!en) {
+    return { en: query, cn: query, ru: query };
   }
 
-  return { en: en.trim(), cn: cn.trim(), ru: ru.trim() };
+  return { en, cn, ru };
 }
 
 /**
@@ -98,7 +100,10 @@ function translateQueryRuleBased(query) {
  */
 async function searchGitHub(octokit, keywords, perLang = 30) {
   const SIX_MONTHS_AGO = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const baseFilter = `stars:>50 license:mit license:apache-2.0 license:bsd-2-clause license:bsd-3-clause pushed:>${SIX_MONTHS_AGO}`;
+  // GitHub Search API doesn't support OR for license qualifiers well.
+  // Search without license filter, then filter permissive licenses post-hoc.
+  const baseFilter = `stars:>50 pushed:>${SIX_MONTHS_AGO}`;
+  const PERMISSIVE_LICENSES = new Set(['MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', '0BSD', 'ISC', 'Unlicense', 'WTFPL']);
 
   const searches = [
     { lang: 'en', query: `${keywords.en} ${baseFilter}` },
@@ -119,6 +124,10 @@ async function searchGitHub(octokit, keywords, perLang = 30) {
 
       for (const item of response.data.items) {
         if (!allItems.has(item.id)) {
+          // Post-hoc permissive license filter (keep unknown/NOASSERTION, filter out copyleft)
+          const spdx = item.license?.spdx_id || '';
+          const COPYLEFT = new Set(['GPL-2.0', 'GPL-3.0', 'AGPL-3.0', 'LGPL-2.1', 'LGPL-3.0', 'MPL-2.0', 'EUPL-1.1', 'EUPL-1.2', 'SSPL-1.0', 'CPAL-1.0']);
+          if (spdx && COPYLEFT.has(spdx)) continue;
           allItems.set(item.id, { ...item, _searchLang: search.lang });
         }
       }
