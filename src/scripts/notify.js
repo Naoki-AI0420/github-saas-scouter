@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 require('dotenv').config();
-const { sendDailyTop10 } = require('../services/notifier');
+const { sendDailyTop10, sendDailyTrend } = require('../services/notifier');
 const { closeDb } = require('../models/database');
 
 async function main() {
@@ -9,10 +9,23 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('[NotifyScript] Sending daily top 10...');
-  await sendDailyTop10(process.env.DISCORD_WEBHOOK_URL);
-  console.log('[NotifyScript] Done.');
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const mode = process.argv[2] || 'all'; // 'top10', 'trend', or 'all'
+
+  if (mode === 'top10' || mode === 'all') {
+    console.log('[NotifyScript] Sending daily top 10...');
+    await sendDailyTop10(webhookUrl);
+    console.log('[NotifyScript] Daily top 10 sent.');
+  }
+
+  if (mode === 'trend' || mode === 'all') {
+    console.log('[NotifyScript] Sending daily trend...');
+    await sendDailyTrend(webhookUrl);
+    console.log('[NotifyScript] Daily trend sent.');
+  }
+
   closeDb();
+  console.log('[NotifyScript] Done.');
 }
 
 main().catch(err => {
