@@ -141,4 +141,59 @@ const Repository = {
   }
 };
 
+const StarHistory = {
+  record(githubId, fullName, stars) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT OR IGNORE INTO star_history (github_id, full_name, stars, recorded_at)
+      VALUES (?, ?, ?, datetime('now'))
+    `);
+    return stmt.run(githubId, fullName, stars);
+  },
+
+  recordBatch(repos) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT OR IGNORE INTO star_history (github_id, full_name, stars, recorded_at)
+      VALUES (?, ?, ?, datetime('now'))
+    `);
+    const tx = db.transaction((items) => {
+      for (const r of items) {
+        stmt.run(r.github_id, r.full_name, r.stars);
+      }
+    });
+    tx(repos);
+  },
+
+  getDailyTrend(limit = 10) {
+    const db = getDb();
+    return db.prepare(`
+      SELECT
+        t.github_id,
+        t.full_name,
+        t.stars AS current_stars,
+        y.stars AS yesterday_stars,
+        (t.stars - y.stars) AS star_diff
+      FROM star_history t
+      JOIN star_history y
+        ON t.github_id = y.github_id
+        AND date(y.recorded_at) = date(t.recorded_at, '-1 day')
+      WHERE date(t.recorded_at) = date('now')
+      ORDER BY star_diff DESC
+      LIMIT ?
+    `).all(limit);
+  },
+
+  getLatestForRepo(githubId) {
+    const db = getDb();
+    return db.prepare(`
+      SELECT * FROM star_history
+      WHERE github_id = ?
+      ORDER BY recorded_at DESC
+      LIMIT 1
+    `).get(githubId);
+  },
+};
+
 module.exports = Repository;
+module.exports.StarHistory = StarHistory;

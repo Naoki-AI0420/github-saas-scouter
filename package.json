@@ -9,6 +9,7 @@
     "crawl": "node src/scripts/crawl.js",
     "notify": "node src/scripts/notify.js",
     "search": "node src/scripts/search.js",
+    "trend": "node src/scripts/trend.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "postinstall": "node patch-bottleneck.js"

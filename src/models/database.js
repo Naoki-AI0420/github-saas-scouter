@@ -63,6 +63,16 @@ function initTables(db) {
     CREATE INDEX IF NOT EXISTS idx_repos_category ON repositories(category);
     CREATE INDEX IF NOT EXISTS idx_repos_status ON repositories(status);
     CREATE INDEX IF NOT EXISTS idx_repos_first_seen ON repositories(first_seen);
+
+    CREATE TABLE IF NOT EXISTS star_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      github_id INTEGER NOT NULL,
+      full_name TEXT NOT NULL,
+      stars INTEGER NOT NULL,
+      recorded_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(github_id, recorded_at)
+    );
+    CREATE INDEX IF NOT EXISTS idx_star_history_date ON star_history(recorded_at);
   `);
 
   // マイグレーション: japanese_summary カラム追加
