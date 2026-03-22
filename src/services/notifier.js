@@ -43,6 +43,8 @@ function formatRepoEmbed(repo, rank) {
 async function generateTrendCommentary(repo, anthropicClient) {
   if (!anthropicClient) return null;
 
+  const readmeExcerpt = repo.readme_excerpt ? repo.readme_excerpt.substring(0, 800) : '';
+
   const prompt = `以下のGitHubリポジトリについて、SaaS商品化の観点から簡潔に解説してください。
 
 リポジトリ: ${repo.full_name}
@@ -51,9 +53,15 @@ async function generateTrendCommentary(repo, anthropicClient) {
 Star数: ${repo.stars}
 ライセンス: ${repo.license || '不明'}
 カテゴリ: ${repo.category || '不明'}
+README抜粋: ${readmeExcerpt || 'なし'}
 
 以下の形式で回答（各項目1行、余計な前置きなし）:
 💡 （何のツールか1行で）
+📋 主な機能:
+  ・（機能1）
+  ・（機能2）
+  ・（機能3）
+👤 ターゲット: （誰が使うか — 例: 中小企業の経理担当、個人開発者、EC事業者 等）
 🇯🇵 日本語対応: （あり/なし → 商品化チャンスの有無）
 💰 想定価格帯: ¥X,XXX〜¥XX,XXX/月
 ⏱️ 商品化目安: X〜X日
@@ -62,7 +70,7 @@ Star数: ${repo.stars}
   try {
     const response = await anthropicClient.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
+      max_tokens: 500,
       messages: [{ role: 'user', content: prompt }],
     });
     return response.content[0].text.trim();
@@ -83,6 +91,53 @@ function generateTrendCommentaryRuleBased(repo) {
     ? repo.japanese_summary.substring(0, 60)
     : (repo.description || 'オープンソースツール').substring(0, 60);
   lines.push(`💡 ${summary}`);
+
+  // 主な機能（カテゴリから推定）
+  const featureMap = {
+    'CRM': ['顧客管理・連絡先DB', 'パイプライン/案件追跡', 'メール連携'],
+    'POS': ['レジ・決済処理', '在庫管理', '売上レポート'],
+    'HR/勤怠': ['勤怠打刻・集計', '従業員管理', '給与計算'],
+    '会計': ['仕訳入力・帳簿管理', '決算書出力', '請求書発行'],
+    '請求書': ['請求書作成・送付', '入金管理', 'PDF出力'],
+    'LMS': ['コース作成・管理', '受講進捗トラッキング', 'クイズ・テスト'],
+    'ERP': ['統合業務管理', '在庫・購買管理', '財務・人事モジュール'],
+    'ECサイト': ['商品カタログ管理', 'カート・決済', '注文管理'],
+    'プロジェクト管理': ['タスク/カンバンボード', 'チーム管理', 'タイムトラッキング'],
+    'チャットボット': ['自動応答フロー', 'FAQ管理', 'マルチチャネル対応'],
+    'アナリティクス': ['データ可視化', 'ダッシュボード', 'レポート生成'],
+    'ヘルプデスク': ['チケット管理', '問い合わせ対応', 'ナレッジベース'],
+    'CMS': ['コンテンツ管理', 'テンプレート/テーマ', 'メディア管理'],
+    'ノーコード': ['ドラッグ&ドロップUI構築', 'データベース管理', 'API連携'],
+    'AIツール': ['LLM連携', 'チャットUI', 'プロンプト管理'],
+    '自動化': ['ワークフロー自動化', 'トリガー/アクション設定', '外部サービス連携'],
+  };
+  const features = featureMap[repo.category];
+  if (features) {
+    lines.push(`📋 主な機能:`);
+    features.forEach(f => lines.push(`  ・${f}`));
+  }
+
+  // ターゲットユーザー（カテゴリから推定）
+  const targetMap = {
+    'CRM': '営業チーム・中小企業の営業部門',
+    'POS': '小売店・飲食店オーナー',
+    'HR/勤怠': '中小企業の人事・総務担当',
+    '会計': '中小企業の経理担当・個人事業主',
+    '請求書': 'フリーランス・中小企業の経理',
+    'LMS': '研修担当・教育機関・スクール運営者',
+    'ERP': '中堅〜大企業の経営管理部門',
+    'ECサイト': 'EC事業者・D2Cブランド',
+    'プロジェクト管理': '開発チーム・プロジェクトマネージャー',
+    'チャットボット': 'カスタマーサポート部門',
+    'アナリティクス': 'マーケティング担当・データ分析者',
+    'ヘルプデスク': 'カスタマーサポート・IT部門',
+    'CMS': 'Web担当・コンテンツマーケター',
+    'ノーコード': '非エンジニアの業務改善担当',
+    'AIツール': '開発者・企業のDX推進担当',
+    '自動化': '業務効率化担当・IT管理者',
+  };
+  const target = targetMap[repo.category] || '中小企業・個人開発者';
+  lines.push(`👤 ターゲット: ${target}`);
 
   // 日本語対応
   const hasJP = repo.readme_lang === 'Japanese';
