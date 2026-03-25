@@ -86,11 +86,14 @@ README抜粋: ${readmeExcerpt || 'なし'}
 function generateTrendCommentaryRuleBased(repo) {
   const lines = [];
 
-  // 概要
-  const summary = repo.japanese_summary
-    ? repo.japanese_summary.substring(0, 60)
-    : (repo.description || 'オープンソースツール').substring(0, 60);
-  lines.push(`💡 ${summary}`);
+  // 概要（日本語解説があればそれを使う、なければ英語descriptionをそのまま出す）
+  if (repo.japanese_summary) {
+    lines.push(`💡 ${repo.japanese_summary.substring(0, 100)}`);
+  } else if (repo.description) {
+    lines.push(`💡 ${repo.description.substring(0, 100)}`);
+  } else {
+    lines.push(`💡 オープンソースの${repo.category || '開発'}ツール`);
+  }
 
   // 主な機能（カテゴリから推定）
   const featureMap = {
@@ -115,6 +118,14 @@ function generateTrendCommentaryRuleBased(repo) {
   if (features) {
     lines.push(`📋 主な機能:`);
     features.forEach(f => lines.push(`  ・${f}`));
+  } else if (repo.topics) {
+    // カテゴリ未分類でもtopicsからキーワードを拾う
+    try {
+      const topics = typeof repo.topics === 'string' ? JSON.parse(repo.topics) : (repo.topics || []);
+      if (topics.length > 0) {
+        lines.push(`📋 タグ: ${topics.slice(0, 5).join(', ')}`);
+      }
+    } catch (e) { /* ignore parse errors */ }
   }
 
   // ターゲットユーザー（カテゴリから推定）
