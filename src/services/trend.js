@@ -9,19 +9,28 @@ const { StarHistory } = require('../models/repository');
 function getDailyTrend(limit = 10) {
   const db = getDb();
 
-  // 前日比のスター増加ランキング
+  // 前日比のスター増加ランキング（同日/同リポの重複を排除）
   const trending = db.prepare(`
+    WITH today AS (
+      SELECT github_id, full_name, MAX(stars) AS stars
+      FROM star_history
+      WHERE date(recorded_at) = date('now')
+      GROUP BY github_id
+    ),
+    yesterday AS (
+      SELECT github_id, MAX(stars) AS stars
+      FROM star_history
+      WHERE date(recorded_at) = date('now', '-1 day')
+      GROUP BY github_id
+    )
     SELECT
       t.github_id,
       t.full_name,
       t.stars AS current_stars,
       COALESCE(y.stars, 0) AS yesterday_stars,
       (t.stars - COALESCE(y.stars, 0)) AS star_diff
-    FROM star_history t
-    LEFT JOIN star_history y
-      ON t.github_id = y.github_id
-      AND date(y.recorded_at) = date(t.recorded_at, '-1 day')
-    WHERE date(t.recorded_at) = date('now')
+    FROM today t
+    LEFT JOIN yesterday y ON t.github_id = y.github_id
     ORDER BY star_diff DESC
     LIMIT ?
   `).all(limit);
