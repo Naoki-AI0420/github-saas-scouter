@@ -40,6 +40,9 @@ function initTables(db) {
       score_japan_gap INTEGER DEFAULT 0,
       score_maintenance INTEGER DEFAULT 0,
       score_total INTEGER DEFAULT 0,
+      score_spicy INTEGER DEFAULT 0,
+      spicy_level TEXT DEFAULT '',
+      spicy_flags TEXT DEFAULT '[]',
       readme_lang TEXT DEFAULT 'English',
       status TEXT DEFAULT 'new',
       first_seen TEXT DEFAULT (datetime('now')),
@@ -91,3 +94,15 @@ function closeDb() {
 }
 
 module.exports = { getDb, closeDb, initTables };
+
+// Migration: add spicy columns
+async function migrateSpicy(db) {
+  try {
+    await db.run('ALTER TABLE repositories ADD COLUMN score_spicy INTEGER DEFAULT 0');
+    await db.run("ALTER TABLE repositories ADD COLUMN spicy_level TEXT DEFAULT ''");
+    await db.run("ALTER TABLE repositories ADD COLUMN spicy_flags TEXT DEFAULT '[]'");
+    console.log('[DB] Spicy columns added');
+  } catch (e) {
+    // Columns already exist
+  }
+}

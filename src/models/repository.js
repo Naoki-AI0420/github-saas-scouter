@@ -9,13 +9,13 @@ const Repository = {
         license, language, last_updated, topics, readme_excerpt,
         has_docker, has_ui, has_docs, open_issues, closed_issues,
         category, readme_lang, japanese_summary, score_business, score_packaging, score_japan_gap,
-        score_maintenance, score_total, last_crawled
+        score_maintenance, score_total, score_spicy, spicy_level, spicy_flags, last_crawled
       ) VALUES (
         @github_id, @full_name, @name, @description, @stars, @forks,
         @license, @language, @last_updated, @topics, @readme_excerpt,
         @has_docker, @has_ui, @has_docs, @open_issues, @closed_issues,
         @category, @readme_lang, @japanese_summary, @score_business, @score_packaging, @score_japan_gap,
-        @score_maintenance, @score_total, datetime('now')
+        @score_maintenance, @score_total, @score_spicy, @spicy_level, @spicy_flags, datetime('now')
       )
       ON CONFLICT(github_id) DO UPDATE SET
         description = excluded.description,
@@ -39,6 +39,9 @@ const Repository = {
         score_japan_gap = excluded.score_japan_gap,
         score_maintenance = excluded.score_maintenance,
         score_total = excluded.score_total,
+        score_spicy = excluded.score_spicy,
+        spicy_level = excluded.spicy_level,
+        spicy_flags = excluded.spicy_flags,
         last_crawled = datetime('now')
     `);
     return stmt.run(repo);

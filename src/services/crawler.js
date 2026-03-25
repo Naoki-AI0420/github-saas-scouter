@@ -2,7 +2,7 @@ const { Octokit } = require('octokit');
 const Anthropic = require('@anthropic-ai/sdk');
 const Repository = require('../models/repository');
 const { getDb } = require('../models/database');
-const { scoreRepository, detectReadmeLanguage } = require('./scorer');
+const { scoreRepository, scoreSpicy, detectReadmeLanguage } = require('./scorer');
 
 const CATEGORIES = {
   crm: { query: 'crm customer relationship management', label: 'CRM' },
@@ -312,6 +312,9 @@ async function crawlCategory(octokit, categoryKey, anthropicClient) {
         repoData.score_japan_gap = scores.japanGap;
         repoData.score_maintenance = scores.maintenance;
         repoData.score_total = scores.total;
+        repoData.score_spicy = scores.spicy?.score || 0;
+        repoData.spicy_level = scores.spicy?.level || '';
+        repoData.spicy_flags = JSON.stringify(scores.spicy?.flags || []);
 
         // 日本語要約を生成（Claude API優先、なければルールベース）
         if (anthropicClient) {

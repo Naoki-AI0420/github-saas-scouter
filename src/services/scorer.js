@@ -38,13 +38,93 @@ function scoreRepository(repo) {
   const packaging = scorePackaging(repo);
   const japanGap = scoreJapanGap(repo);
   const maintenance = scoreMaintenance(repo);
+  const spicy = scoreSpicy(repo);
 
   return {
     business,
     packaging,
     japanGap,
     maintenance,
+    spicy,
     total: Math.min(100, business + packaging + japanGap + maintenance),
+    spicyTotal: spicy,
+  };
+}
+
+/**
+ * 面白さ/ヤバさスコア (0-100)
+ * 「人間が反応するリポジトリ」を検出
+ * SaaSスコアとは独立。バズ・炎上・OSINT的な価値
+ */
+function scoreSpicy(repo) {
+  let score = 0;
+  const flags = [];
+
+  const text = `${repo.full_name || ''} ${repo.description || ''} ${repo.readme_excerpt || ''}`.toLowerCase();
+  const repoName = (repo.full_name || repo.name || '').toLowerCase();
+
+  // --- カテゴリ1: 秘密漏洩系 (0-30) ---
+  const secretKeywords = [
+    'password', 'credential', 'secret', 'api.key', 'apikey', 'token',
+    'private.key', '.env', 'config.json', 'aws_access', 'ssh.key',
+    'database.url', 'connection.string', 'auth.token',
+  ];
+  const secretHits = secretKeywords.filter(k => text.includes(k.replace('.', '')));
+  if (secretHits.length >= 3) { score += 30; flags.push('🔑 秘密情報大量露出の疑い'); }
+  else if (secretHits.length >= 1) { score += 10; flags.push('🔑 秘密情報キーワード検出'); }
+
+  // --- カテゴリ2: ハッキング/エクスプロイト系 (0-25) ---
+  const hackKeywords = [
+    'exploit', 'hack', 'crack', 'brute.force', 'payload', 'shellcode',
+    'reverse.shell', 'keylogger', 'ransomware', 'malware', 'trojan',
+    'phishing', 'bypass', 'injection', 'xss', 'sqli', 'rce',
+    'privilege.escalation', 'zero.day', '0day',
+  ];
+  const hackHits = hackKeywords.filter(k => text.includes(k.replace('.', '')));
+  if (hackHits.length >= 3) { score += 25; flags.push('💀 セキュリティツール/エクスプロイト'); }
+  else if (hackHits.length >= 1) { score += 10; flags.push('⚠️ セキュリティ関連キーワード'); }
+
+  // --- カテゴリ3: NSFW/倫理的にアウト系 (0-25) ---
+  const nsfwKeywords = [
+    'porn', 'adult', 'nsfw', 'xxx', 'hentai', 'scraper.adult',
+    'onlyfans', 'nude', 'erotic', 'gambling', 'casino', 'betting',
+    'drug', 'darknet', 'torrent', 'pirat', 'warez', 'crack',
+  ];
+  const nsfwHits = nsfwKeywords.filter(k => text.includes(k));
+  if (nsfwHits.length >= 2) { score += 25; flags.push('🔞 NSFW/倫理的にグレー'); }
+  else if (nsfwHits.length >= 1) { score += 12; flags.push('👀 NSFW関連キーワード'); }
+
+  // --- カテゴリ4: 企業所属 × ヤバいコンテンツ (0-20) ---
+  // メールドメインが企業っぽい場合（.co.jp, 企業ドメイン等）
+  const ownerName = (repo.owner || repo.full_name || '').split('/')[0].toLowerCase();
+  const isCorpLooking = /inc|corp|co|ltd|company|official|enterprise/.test(ownerName);
+  if (isCorpLooking && (nsfwHits.length > 0 || hackHits.length > 0)) {
+    score += 20;
+    flags.push('🏢 企業アカウントでヤバいコード');
+  }
+
+  // --- カテゴリ5: バズりやすさ (0-15) ---
+  // スター数に対してフォークが異常に多い（コピーされまくってる）
+  if (repo.stars > 0 && repo.forks / repo.stars > 0.5) {
+    score += 5;
+    flags.push('📈 フォーク率異常（コピーされまくり）');
+  }
+  // 最近急にスターが増えた（trending）
+  if (repo.trending_rank && repo.trending_rank <= 25) {
+    score += 10;
+    flags.push('🔥 トレンド入り');
+  }
+  // README が異常に長い or 異常に短い
+  const readmeLen = (repo.readme_excerpt || '').length;
+  if (readmeLen < 10 && repo.stars > 100) {
+    score += 5;
+    flags.push('🤔 README ほぼなしで人気');
+  }
+
+  return {
+    score: Math.min(100, score),
+    flags,
+    level: score >= 50 ? '🌶️🌶️🌶️ 激ヤバ' : score >= 25 ? '🌶️🌶️ ヤバめ' : score >= 10 ? '🌶️ ちょい気になる' : '😐 普通',
   };
 }
 
@@ -202,4 +282,4 @@ function scoreMaintenance(repo) {
   return Math.min(20, score);
 }
 
-module.exports = { scoreRepository, scoreBusiness, scorePackaging, scoreJapanGap, scoreMaintenance, detectReadmeLanguage, MARKET_SIZE, JAPAN_HIGH_DEMAND };
+module.exports = { scoreRepository, scoreBusiness, scorePackaging, scoreJapanGap, scoreMaintenance, scoreSpicy, detectReadmeLanguage, MARKET_SIZE, JAPAN_HIGH_DEMAND };
