@@ -151,6 +151,9 @@ async function crawlTrending(token, since = 'daily') {
       repoData.score_japan_gap = scores.japanGap;
       repoData.score_maintenance = scores.maintenance;
       repoData.score_total = scores.total;
+      repoData.score_spicy = scores.spicy?.score || 0;
+      repoData.spicy_level = scores.spicy?.level || '';
+      repoData.spicy_flags = JSON.stringify(scores.spicy?.flags || []);
       repoData.japanese_summary = null; // AI summaries applied later in crawl pipeline
 
       Repository.upsert(repoData);
